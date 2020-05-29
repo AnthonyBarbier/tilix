@@ -289,6 +289,8 @@ private:
     // to track which regex generated the match
     TerminalRegex[int] regexTag;
 
+    bool ctrlNeeded;
+
     //Track match detection
     TerminalURLMatch match;
 
@@ -643,6 +645,13 @@ private:
         });
 
         //Read Only
+        registerActionWithSettings(group, ACTION_PREFIX, ACTION_CTRL_LINK, gsShortcuts, delegate(GVariant state, SimpleAction sa) {
+            bool newState = !sa.getState().getBoolean();
+            sa.setState(new GVariant(newState));
+            vte.setInputEnabled(!newState);
+            ctrlNeeded = newState;
+        }, null, new GVariant(false));
+
         registerActionWithSettings(group, ACTION_PREFIX, ACTION_READ_ONLY, gsShortcuts, delegate(GVariant state, SimpleAction sa) {
             bool newState = !sa.getState().getBoolean();
             sa.setState(new GVariant(newState));
@@ -827,6 +836,7 @@ private:
         GMenu menuSection = new GMenu();
         menuSection.append(_("Find…"), getActionDetailedName(ACTION_PREFIX, ACTION_FIND));
         menuSection.append(_("Read-Only"), getActionDetailedName(ACTION_PREFIX, ACTION_READ_ONLY));
+        menuSection.append(_("Ctrl+click to open URLs"), getActionDetailedName(ACTION_PREFIX, ACTION_CTRL_LINK));
         model.appendSection(null, menuSection);
 
         // Assistants
@@ -1935,7 +1945,7 @@ private:
             updateMatch(event);
             switch (event.button.button) {
             case MouseButton.PRIMARY:
-                if ((event.button.state & GdkModifierType.CONTROL_MASK) && match.match) {
+                if ((!ctrlNeeded || event.button.state & GdkModifierType.CONTROL_MASK) && match.match) {
                     trace("Opening match");
                     openURI(match);
                     return true;
